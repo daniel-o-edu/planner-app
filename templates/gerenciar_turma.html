@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6 pb-20">
+    
+    <div class="flex items-center justify-between">
+        <nav class="flex text-sm text-slate-500">
+            <a href="{{ url_for('listar_turmas') }}" class="hover:text-primary-600 transition-colors">Turmas</a>
+            <span class="mx-2">/</span>
+            <span class="text-slate-900 font-medium">{{ turma.nome }}</span>
+        </nav>
+        
+        <a href="{{ url_for('toggle_status_turma', turma_id=turma.id) }}" 
+           class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide transition-colors border
+           {% if turma.ativa %} bg-green-50 text-green-700 border-green-200 hover:bg-green-100 {% else %} bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200 {% endif %}">
+            <div class="w-2 h-2 rounded-full {% if turma.ativa %} bg-green-500 {% else %} bg-slate-400 {% endif %}"></div>
+            {{ 'Ativa' if turma.ativa else 'Inativa' }}
+        </a>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+            <div class="space-y-2 flex-1">
+                <div class="flex items-center gap-3">
+                    <h1 class="text-3xl font-bold text-slate-900">{{ turma.nome }}</h1>
+                    <button onclick="openEditTurmaModal()" class="text-slate-400 hover:text-primary-600 transition-colors" title="Editar dados da turma">
+                        <i data-lucide="pencil" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="text-sm text-slate-600 space-y-1">
+                    <p class="font-mono text-slate-500 bg-slate-50 inline-block px-2 py-0.5 rounded border border-slate-100">
+                        {{ turma.codigo_completo or 'Sem código cadastrado' }}
+                    </p>
+                    <p class="flex items-center gap-2 font-medium">
+                        <i data-lucide="book" class="w-4 h-4 text-primary-500"></i>
+                        {{ turma.unidade_curricular or 'Unidade Curricular não definida' }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                {% if turma.link_diario %}
+                <a href="{{ turma.link_diario }}" target="_blank" class="btn-secondary flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium shadow-sm">
+                    <i data-lucide="external-link" class="w-4 h-4"></i> Diário
+                </a>
+                {% endif %}
+                
+                {% if turma.drive_link %}
+                <a href="{{ turma.drive_link }}" target="_blank" class="btn-secondary flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 text-sm font-medium shadow-sm">
+                    <i data-lucide="folder" class="w-4 h-4 text-blue-500"></i> Drive
+                </a>
+                {% endif %}
+
+                <a href="{{ url_for('imprimir_aulas', turma_id=turma.id) }}" target="_blank" class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 text-sm font-medium transition-colors shadow-sm">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Imprimir
+                </a>
+                
+                <form action="{{ url_for('excluir_turma', turma_id=turma.id) }}" method="POST" onsubmit="return confirm('ATENÇÃO: Isso apagará a turma e todas as aulas! Continuar?');" class="inline">
+                    <button type="submit" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2 rounded-lg transition-colors shadow-sm" title="Excluir Turma">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                Aulas Planejadas
+                <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full">{{ aulas|length }}</span>
+            </h2>
+            <button onclick="openAulaModal()" class="bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2 rounded-lg transition-colors shadow-sm flex items-center gap-2 text-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Nova Aula
+            </button>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            {% if aulas %}
+            <table class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500">
+                    <tr>
+                        <th class="px-6 py-4 w-16 text-center">#</th>
+                        <th class="px-6 py-4 w-32">Data</th>
+                        <th class="px-6 py-4 w-32">Status</th>
+                        <th class="px-6 py-4">Título / Local</th>
+                        <th class="px-6 py-4 w-20"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for aula in aulas %}
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="px-6 py-4 text-center font-bold text-slate-400">{{ aula.numero_aula }}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-slate-900">{{ aula.data.strftime('%d/%m/%Y') }}</div>
+                            <div class="text-xs text-slate-500">{{ aula.turno }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium border
+                                {% if aula.status == 'Entregue' %} bg-green-50 text-green-700 border-green-200
+                                {% elif aula.status == 'Pronta' %} bg-blue-50 text-blue-700 border-blue-200
+                                {% elif aula.status == 'Planejando' %} bg-amber-50 text-amber-700 border-amber-200
+                                {% else %} bg-slate-100 text-slate-600 border-slate-200 {% endif %}">
+                                {{ aula.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-slate-900">{{ aula.titulo }}</div>
+                            <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                                {% if aula.unidade_predio %}<span>{{ aula.unidade_predio }}</span>{% endif %}
+                                {% if aula.sala %}<span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> {{ aula.sala }}</span>{% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button class="text-slate-400 hover:text-primary-600 transition-colors">
+                                <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="p-12 text-center flex flex-col items-center justify-center">
+                <div class="bg-slate-50 p-4 rounded-full mb-4">
+                    <i data-lucide="calendar-off" class="w-8 h-8 text-slate-400"></i>
+                </div>
+                <p class="text-slate-900 font-medium">Cronograma vazio</p>
+                <p class="text-slate-500 text-sm mt-1">Clique em "Nova Aula" para começar o planejamento.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div id="modal-aula" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 backdrop-blur-sm p-4">
+    <div class="bg-white border border-slate-200 w-full max-w-3xl rounded-xl shadow-2xl relative flex flex-col max-h-[90vh]">
+        
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="calendar-plus" class="w-6 h-6 text-primary-600"></i>
+                Planejar Aula
+            </h2>
+            <button onclick="closeAulaModal()" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto">
+            <form action="{{ url_for('nova_aula', turma_id=turma.id) }}" method="POST" class="space-y-6">
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-1.5">
+                        <label class="label-form">Nº Aula</label>
+                        <select name="numero_aula" class="input-form">
+                            {% for i in range(1, 100) %}
+                            <option value="{{ i }}" {% if aulas|length + 1 == i %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="label-form">Data</label>
+                        <input type="date" name="data" required class="input-form">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="label-form">Turno</label>
+                        <select name="turno" class="input-form">
+                            <option value="Noite">Noite</option>
+                            <option value="Manhã">Manhã</option>
+                            <option value="Tarde">Tarde</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-1.5">
+                        <label class="label-form">Status</label>
+                        <select name="status" class="input-form">
+                            <option value="Planejar">Planejar</option>
+                            <option value="Planejando">Planejando</option>
+                            <option value="Pronta">Pronta</option>
+                            <option value="Entregue">Entregue</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="label-form">Professor</label>
+                        <select name="professor_id" class="input-form">
+                            {% for prof in professores %}
+                            <option value="{{ prof.id }}" {% if prof.id == current_user.id %}selected{% endif %}>{{ prof.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-1.5">
+                        <label class="label-form">Unidade</label>
+                        <input type="text" name="unidade" placeholder="Ex: Bloco A" class="input-form">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="label-form">Sala</label>
+                        <input type="text" name="sala" placeholder="Ex: Lab 03" value="{{ turma.local or '' }}" class="input-form">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="label-form">Bloco Estudo</label>
+                        <input type="text" name="bloco_estudo" placeholder="Ex: Módulo 1" class="input-form">
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="label-form">Título da Aula</label>
+                        <input type="text" name="titulo" required placeholder="Ex: Introdução à Orientação a Objetos" class="input-form font-semibold">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="label-form">Descrição do Conteúdo</label>
+                        <textarea name="descricao" rows="4" class="input-form" placeholder="Detalhe os tópicos que serão abordados..."></textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-1.5">
+                        <label class="label-form">Link Arquivos</label>
+                        <input type="url" name="link_arquivos" placeholder="https://" class="input-form">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="label-form">Observações</label>
+                        <input type="text" name="observacoes" placeholder="Notas internas..." class="input-form">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeAulaModal()" class="flex-1 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 font-medium text-slate-700 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors">Salvar Aula</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="modal-edit-turma" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 backdrop-blur-sm p-4">
+    <div class="bg-white border border-slate-200 w-full max-w-lg rounded-xl shadow-2xl p-6 relative">
+        <button onclick="closeEditTurmaModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <h2 class="text-xl font-bold text-slate-900 mb-6">Editar Turma</h2>
+        
+        <form action="{{ url_for('editar_turma', turma_id=turma.id) }}" method="POST" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="label-form">Nome Curto</label>
+                    <input type="text" name="nome" value="{{ turma.nome }}" required class="input-form">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="label-form">Unidade Curricular</label>
+                    <input type="text" name="unidade_curricular" value="{{ turma.unidade_curricular or '' }}" class="input-form">
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="label-form">Código da Turma</label>
+                <input type="text" name="codigo_completo" value="{{ turma.codigo_completo or '' }}" class="input-form">
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="label-form">Link Diário Classe</label>
+                <input type="url" name="link_diario" value="{{ turma.link_diario or '' }}" class="input-form">
+            </div>
+
+            <div class="pt-4 flex gap-3 border-t border-slate-100 mt-2">
+                <button type="button" onclick="closeEditTurmaModal()" class="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-lg">Cancelar</button>
+                <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 rounded-lg shadow-sm">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .label-form { @apply block text-xs font-bold text-slate-700 uppercase mb-1; }
+    .input-form { @apply w-full border border-slate-200 rounded-lg px-3 py-2.5 text-slate-900 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all; }
+</style>
+
+<script>
+    // Controle Modal Aula
+    const modalAula = document.getElementById('modal-aula');
+    function openAulaModal() { modalAula.classList.remove('hidden'); modalAula.classList.add('flex'); }
+    function closeAulaModal() { modalAula.classList.add('hidden'); modalAula.classList.remove('flex'); }
+    modalAula.addEventListener('click', (e) => { if (e.target === modalAula) closeAulaModal(); });
+
+    // Controle Modal Editar Turma
+    const modalEdit = document.getElementById('modal-edit-turma');
+    function openEditTurmaModal() { modalEdit.classList.remove('hidden'); modalEdit.classList.add('flex'); }
+    function closeEditTurmaModal() { modalEdit.classList.add('hidden'); modalEdit.classList.remove('flex'); }
+    modalEdit.addEventListener('click', (e) => { if (e.target === modalEdit) closeEditTurmaModal(); });
+</script>
+{% endblock %}

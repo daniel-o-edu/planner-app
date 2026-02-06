@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Transições suaves para o menu */
+        .sidebar-transition { transition: width 0.3s ease-in-out; }
+        .fade-text { transition: opacity 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 h-screen flex overflow-hidden text-slate-900">
+
+    <aside id="sidebar" class="bg-white border-r border-slate-200 hidden md:flex flex-col z-10 sidebar-transition w-64">
+        
+        <div class="h-16 flex items-center justify-between px-4 border-b border-slate-100">
+            <div class="flex items-center gap-3 overflow-hidden whitespace-nowrap">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
+                    {{ current_user.nome[:2].upper() }}
+                </div>
+                <span id="user-name-text" class="font-bold text-slate-800 truncate fade-text">
+                    {{ current_user.nome.split()[0] }}
+                </span>
+            </div>
+            
+            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-blue-600 p-1 rounded-md transition-colors">
+                <i id="toggle-icon" data-lucide="panel-left-close" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto overflow-x-hidden">
+            
+            <a href="{{ url_for('dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group
+               {{ 'bg-blue-50 text-blue-700' if request.endpoint == 'dashboard' else 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
+                <span class="menu-text fade-text whitespace-nowrap">Calendário</span>
+            </a>
+
+            <a href="{{ url_for('listar_turmas') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group
+               {{ 'bg-blue-50 text-blue-700' if request.endpoint == 'listar_turmas' else 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i data-lucide="book-open" class="w-5 h-5 shrink-0"></i>
+                <span class="menu-text fade-text whitespace-nowrap">Turmas</span>
+            </a>
+
+            <a href="{{ url_for('gerenciar_aulas') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group
+               {{ 'bg-blue-50 text-blue-700' if request.endpoint == 'gerenciar_aulas' else 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i data-lucide="list-todo" class="w-5 h-5 shrink-0"></i>
+                <span class="menu-text fade-text whitespace-nowrap">Gerenciar Aulas</span>
+            </a>
+
+            <a href="{{ url_for('configuracoes') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group
+               {{ 'bg-blue-50 text-blue-700' if request.endpoint == 'configuracoes' else 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i data-lucide="settings" class="w-5 h-5 shrink-0"></i>
+                <span class="menu-text fade-text whitespace-nowrap">Configurações</span>
+            </a>
+
+        </nav>
+
+        <div class="p-4 border-t border-slate-100">
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full">
+                <i data-lucide="log-out" class="w-5 h-5 shrink-0"></i>
+                <span class="menu-text fade-text whitespace-nowrap">Sair</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 w-full relative">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth main-content">
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6 space-y-2 max-w-4xl mx-auto no-print">
+                    {% for category, message in messages %}
+                        <div class="p-4 rounded-lg text-sm font-medium border shadow-sm flex items-center gap-2 animate-pulse-once
+                            {% if category == 'error' %} bg-red-50 text-red-700 border-red-200 
+                            {% elif category == 'success' %} bg-green-50 text-green-700 border-green-200 
+                            {% else %} bg-blue-50 text-blue-700 border-blue-200 {% endif %}">
+                            <i data-lucide="{% if category == 'error' %}alert-circle{% elif category == 'success' %}check-circle{% else %}info{% endif %}" class="w-4 h-4"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}\
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="max-w-7xl mx-auto pb-20 md:pb-0">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </main>
+
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-40 no-print shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="{{ url_for('dashboard') }}" class="flex flex-col items-center gap-1 {{ 'text-blue-600' if request.endpoint == 'dashboard' else 'text-slate-400' }}">
+            <i data-lucide="calendar" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Agenda</span>
+        </a>
+        <a href="{{ url_for('listar_turmas') }}" class="flex flex-col items-center gap-1 {{ 'text-blue-600' if request.endpoint == 'listar_turmas' else 'text-slate-400' }}">
+            <i data-lucide="book-open" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Turmas</span>
+        </a>
+        <a href="{{ url_for('gerenciar_aulas') }}" class="flex flex-col items-center gap-1 {{ 'text-blue-600' if request.endpoint == 'gerenciar_aulas' else 'text-slate-400' }}">
+            <i data-lucide="layout-list" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Aulas</span>
+        </a>
+        <a href="{{ url_for('configuracoes') }}" class="flex flex-col items-center gap-1 {{ 'text-blue-600' if request.endpoint == 'configuracoes' else 'text-slate-400' }}">
+            <i data-lucide="settings" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Config</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="flex flex-col items-center gap-1 text-slate-400 hover:text-red-500">
+            <i data-lucide="log-out" class="w-6 h-6"></i>
+            <span class="text-[10px] font-medium">Sair</span>
+        </a>
+    </div>
+    
+<script>
+    // Função Principal: Abre o modal em modo CRIAR ou EDITAR
+    async function abrirModalAula(aulaId = null) {
+        const modal = document.getElementById('modalAulaUniversal');
+        const form = document.getElementById('formAula');
+        const title = document.getElementById('modalAulaTitle');
+        const subtitle = document.getElementById('modalAulaSubtitle');
+        const btnText = document.getElementById('txt_btn_submit');
+        
+        // Exibir o modal (transição suave)
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalAulaContent').classList.remove('scale-95');
+            document.getElementById('modalAulaContent').classList.add('scale-100');
+        }, 10);
+
+        if (aulaId) {
+            // === MODO EDIÇÃO ===
+            title.innerText = 'Editar Aula';
+            subtitle.innerText = 'Atualize as informações do planejamento.';
+            btnText.innerText = 'Atualizar Aula';
+            form.action = "{{ url_for('editar_aula') }}"; // Rota de Edição
+            
+            // Buscar dados da aula (AJAX)
+            try {
+                const response = await fetch(`/get_aula/${aulaId}`);
+                if(!response.ok) throw new Error("Erro na API");
+                const data = await response.json();
+
+                // Preencher campos
+                document.getElementById('input_aula_id').value = data.id;
+                document.getElementById('input_titulo').value = data.titulo;
+                document.getElementById('input_data').value = data.data;
+                document.getElementById('input_numero_aula').value = data.numero_aula || '';
+                
+                // Selects (garante que selecione a opção correta)
+                document.getElementById('select_turma').value = data.turma_id;
+                document.getElementById('select_turno').value = data.turno;
+                document.getElementById('select_status').value = data.status;
+                document.getElementById('select_ministrante').value = data.ministrante_id;
+                
+                // Campos de Texto
+                document.getElementById('input_unidade').value = data.unidade_predio || '';
+                document.getElementById('input_sala').value = data.sala || '';
+                document.getElementById('input_bloco').value = data.bloco_estudo || '';
+                document.getElementById('input_descricao').value = data.descricao || '';
+                document.getElementById('input_obs').value = data.observacoes || '';
+                document.getElementById('input_link').value = data.link_arquivos || '';
+
+                atualizarCorModal(); // Ajusta a cor do select de status
+
+            } catch (error) {
+                console.error("Erro ao carregar aula:", error);
+                alert("Não foi possível carregar os dados da aula.");
+                fecharModalAula();
+            }
+
+        } else {
+            // === MODO CRIAÇÃO ===
+            title.innerText = 'Nova Aula';
+            subtitle.innerText = 'Preencha os detalhes para agendar.';
+            btnText.innerText = 'Criar Planejamento';
+            form.action = "{{ url_for('criar_aula') }}"; // Rota de Criação
+            form.reset(); // Limpa o formulário
+            
+            document.getElementById('input_aula_id').value = '';
+            atualizarCorModal();
+            
+            // Tenta definir data de hoje como padrão
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('input_data').value = hoje;
+        }
+    }
+
+    function fecharModalAula() {
+        const modal = document.getElementById('modalAulaUniversal');
+        const content = document.getElementById('modalAulaContent');
+        
+        // Animação de saída
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+        content.classList.remove('scale-100');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+
+    function atualizarCorModal() {
+        const sel = document.getElementById('select_status');
+        const status = sel.value;
+        
+        // Remove cores antigas
+        sel.classList.remove('text-blue-600', 'text-red-600', 'text-amber-600', 'text-green-600');
+        
+        if (status === 'Planejando') sel.classList.add('text-blue-600');
+        if (status === 'Preparar') sel.classList.add('text-red-600');
+        if (status === 'Pronta') sel.classList.add('text-amber-600');
+        if (status === 'Entregue') sel.classList.add('text-green-600');
+    }
+
+    // Fechar ao clicar fora
+    window.onclick = function(event) {
+        const modal = document.getElementById('modalAulaUniversal');
+        if (event.target === modal) {
+            fecharModalAula();
+        }
+    }
+</script>
+    <script>
+        lucide.createIcons();
+
+        // Lógica de Colapso do Menu
+        const sidebar = document.getElementById('sidebar');
+        const menuTexts = document.querySelectorAll('.menu-text');
+        const userNameText = document.getElementById('user-name-text');
+        const toggleIcon = document.getElementById('toggle-icon');
+        let isCollapsed = false;
+
+        // Função para atualizar UI
+        function updateSidebarUI() {
+            if (isCollapsed) {
+                // Estado: Fechado (w-20)
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-20');
+                
+                // Esconde textos
+                menuTexts.forEach(el => el.classList.add('hidden'));
+                if(userNameText) userNameText.classList.add('hidden');
+                
+                // Muda ícone do toggle
+                toggleIcon.setAttribute('data-lucide', 'panel-left-open');
+            } else {
+                // Estado: Aberto (w-64)
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-64');
+                
+                // Mostra textos
+                menuTexts.forEach(el => el.classList.remove('hidden'));
+                if(userNameText) userNameText.classList.remove('hidden');
+                
+                // Muda ícone do toggle
+                toggleIcon.setAttribute('data-lucide', 'panel-left-close');
+            }
+            // Recria ícones pois o atributo data-lucide mudou
+            lucide.createIcons();
+        }
+
+        function toggleSidebar() {
+            isCollapsed = !isCollapsed;
+            // Salva preferencia
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+            updateSidebarUI();
+        }
+
+        // Carregar preferência ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedState = localStorage.getItem('sidebarCollapsed');
+            if (savedState === 'true') {
+                isCollapsed = true;
+                updateSidebarUI();
+            }
+        });
+    </script>
+</body>
+</html>

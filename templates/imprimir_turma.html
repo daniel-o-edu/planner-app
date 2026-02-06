@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Plano de Ensino - {{ turma.nome }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Regras de Impressão */
+        @media print {
+            .no-print { display: none !important; visibility: hidden !important; }
+            
+            body { background: white; -webkit-print-color-adjust: exact; margin: 0; padding: 0; }
+            
+            /* PAISAGEM (Landscape) */
+            @page { margin: 1.0cm; size: A4 landscape; } 
+            
+            .page-content { box-shadow: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+            
+            table { font-size: 11px; width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #cbd5e1; page-break-inside: avoid; }
+            tr { page-break-inside: avoid; }
+        }
+
+        /* Visualização na Tela (Simulando A4 Paisagem) */
+        body { max-width: 297mm; margin: 0 auto; background: #f8fafc; }
+        .page-content { background: white; padding: 2rem; min-height: 210mm; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    </style>
+</head>
+<body class="py-8 text-slate-800">
+
+    <div class="no-print fixed top-4 right-4 flex gap-2">
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2 font-medium transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Imprimir
+        </button>
+        <button onclick="window.close()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded shadow font-medium transition-colors">
+            Fechar
+        </button>
+    </div>
+
+    <div class="page-content mx-auto rounded-xl">
+        
+        <div class="mb-6 border-b-2 border-slate-800 pb-4">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold uppercase tracking-tight">{{ turma.nome }}</h1>
+                    <p class="text-slate-500 mt-1">Cronograma de Aulas e Atividades</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-semibold bg-slate-100 px-3 py-1 rounded inline-block mb-1">
+                        Ano Letivo: {{ ano_atual }}
+                    </div>
+                    <div class="text-xs text-slate-400">Gerado em: {{ data_hoje }}</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-8 mt-4 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 print:border-slate-300">
+                <div>
+                    <p><strong class="text-slate-800">Professor:</strong> {{ turma.professor.nome }}</p>
+                    <p><strong class="text-slate-800">Unidade Curricular:</strong> {{ turma.unidade_curricular or 'Não informado' }}</p>
+                </div>
+                <div class="text-right">
+                    <p><strong class="text-slate-800">Código da Turma:</strong> {{ turma.codigo_completo or '---' }}</p>
+                    <p><strong class="text-slate-800">Semestre/Ano:</strong> {{ turma.semestre or 'Atual' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-slate-100 uppercase text-[10px] tracking-wider font-bold text-slate-600">
+                    <th class="px-3 py-2 w-24 text-center border-slate-300">Data</th>
+                    <th class="px-3 py-2 w-40 border-slate-300">Unidade / Sala</th>
+                    <th class="px-3 py-2 w-48 border-slate-300">Bloco de Estudo</th>
+                    <th class="px-3 py-2 border-slate-300">Conteúdo / Atividades</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                {% for aula in aulas %}
+                <tr class="{% if loop.index is even %}bg-slate-50 print:bg-transparent{% endif %}">
+                    
+                    <td class="px-3 py-2 text-center border-slate-200 align-top">
+                        <div class="font-bold text-slate-800">{{ aula.data.strftime('%d/%m') }}</div>
+                        <div class="text-[10px] uppercase text-slate-500 font-medium">
+                        {{ ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][aula.data.strftime('%w')|int] }}</div>
+                        <div class="text-[9px] text-slate-400 mt-1">{{ aula.turno }}</div>
+                    </td>
+
+                    <td class="px-3 py-2 border-slate-200 align-top">
+                        <div class="font-medium text-slate-700 text-xs">{{ aula.unidade_predio or '-' }}</div>
+                        {% if aula.sala %}
+                        <div class="text-[10px] text-slate-500 mt-0.5">Sala: {{ aula.sala }}</div>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-3 py-2 border-slate-200 align-top">
+                        <div class="text-xs text-slate-700 font-medium leading-tight">
+                            {{ aula.bloco_estudo or '-' }}
+                        </div>
+                    </td>
+
+                    <td class="px-3 py-2 border-slate-200 align-top">
+                        <div class="font-bold text-slate-800 text-sm">{{ aula.titulo }}</div>
+                        {% if aula.descricao %}
+                        <div class="mt-1 text-slate-600 leading-relaxed text-[11px] text-justify">
+                            {{ aula.descricao }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if aula.ministrante_id %}
+                        <div class="mt-2 inline-flex items-center gap-1 text-[10px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200 print:border-orange-300">
+                            Substituição (Adjunto)
+                        </div>
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="mt-8 pt-4 border-t border-slate-200 flex justify-between text-[10px] text-slate-400 print:text-slate-500">
+            <div>Sistema de Planejamento Acadêmico</div>
+            <div>Relatório Oficial</div>
+        </div>
+    </div>
+
+    <script>
+        // window.onload = function() { window.print(); }
+    </script>
+</body>
+</html>

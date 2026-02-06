@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+    @media print {
+        aside, .no-print, header, .btn-acao { display: none !important; }
+        body, main { height: auto; overflow: visible; background: white; }
+        .main-content { margin: 0; padding: 0; }
+        table { width: 100%; border: 1px solid #ddd; }
+        td, th { font-size: 10pt; padding: 4px; }
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+</style>
+
+<div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 no-print">
+    <div>
+        <h2 class="text-2xl font-bold text-slate-800">Gerenciar Aulas</h2>
+        <p class="text-slate-500 text-sm">Visão geral e manutenção do planejamento</p>
+    </div>
+    <div class="flex gap-2">
+        <button onclick="abrirModalAula()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all text-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            Nova Aula
+        </button>
+
+        <button onclick="var m=document.getElementById('modalImportar'); m.classList.remove('hidden'); m.classList.add('flex'); setTimeout(function(){ m.classList.remove('opacity-0'); }, 10);" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all text-sm">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+            Importar
+        </button>
+
+        <button onclick="imprimirInteligente()" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all text-sm">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            Imprimir
+        </button>
+
+        <button onclick="window.location.href='{{ url_for('dashboard') }}'" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-all text-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Voltar
+        </button>
+    </div>
+</div>
+
+<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mb-6 no-print">
+    <form id="filterForm" method="GET" action="{{ url_for('gerenciar_aulas') }}" class="space-y-4">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Buscar</label>
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+                    <input type="text" name="search" value="{{ search_query or '' }}" placeholder="Título, conteúdo..." 
+                           class="w-full pl-9 border border-slate-200 rounded-lg py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Turma</label>
+                <select id="filtro_turma_id" name="turma_id" class="w-full border border-slate-200 rounded-lg py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" onchange="this.form.submit()">
+                    <option value="Todas">Todas as Turmas</option>
+                    {% for t in turmas %}
+                        <option value="{{ t.id }}" {% if turma_selecionada|string == t.id|string %}selected{% endif %}>{{ t.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Filtrar por Status:</span>
+            <div class="flex flex-wrap gap-2">
+                {% set options = [
+                    ('Planejando', 'bg-blue-50 text-blue-700 border-blue-200 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600'),
+                    ('Preparar', 'bg-red-50 text-red-700 border-red-200 peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600'),
+                    ('Pronta', 'bg-amber-50 text-amber-700 border-amber-200 peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-500'),
+                    ('Entregue', 'bg-green-50 text-green-700 border-green-200 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600')
+                ] %}
+
+                {% for status_opt, classes in options %}
+                <label class="cursor-pointer group relative">
+                    <input type="checkbox" name="status" value="{{ status_opt }}" 
+                           class="peer sr-only" 
+                           {% if status_opt in status_selecionados %}checked{% endif %}
+                           onchange="document.getElementById('filterForm').submit()">
+                    <span class="px-3 py-1.5 rounded-full text-xs font-bold border transition-all flex items-center gap-1.5 {{ classes }} opacity-60 hover:opacity-100 peer-checked:opacity-100">
+                        {% if status_opt in status_selecionados %}
+                            <i data-lucide="check" class="w-3 h-3"></i>
+                        {% endif %}
+                        {{ status_opt }}
+                    </span>
+                </label>
+                {% endfor %}
+                
+                {% if status_selecionados %}
+                <a href="{{ url_for('gerenciar_aulas', turma_id=turma_selecionada, search=search_query) }}" class="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-800 hover:underline flex items-center">
+                    <i data-lucide="x" class="w-3 h-3 mr-1"></i> Limpar filtros
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-bold tracking-wider">
+                    <th class="px-6 py-4">Turma</th>
+                    <th class="px-6 py-4 text-center">Status</th>
+                    <th class="px-6 py-4">Data</th>
+                    <th class="px-6 py-4">Unidade</th>
+                    <th class="px-6 py-4">Título</th>
+                    <th class="px-6 py-4 text-right no-print">Ações</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for aula in aulas %}
+                <tr class="hover:bg-slate-50 transition-colors group">
+                    
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {{ aula.turma.nome }}
+                        </span>
+                        {% if aula.ministrante_id %}
+                            <div class="text-xs text-orange-600 mt-1 flex items-center gap-1 font-medium">
+                                <i data-lucide="user" class="w-3 h-3"></i> Subst.
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                        {% if aula.status == 'Entregue' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                                <i data-lucide="check-circle-2" class="w-3 h-3"></i> Entregue
+                            </span>
+                        {% elif aula.status == 'Preparar' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                                <i data-lucide="alert-circle" class="w-3 h-3"></i> Preparar
+                            </span>
+                        {% elif aula.status == 'Pronta' %}
+                             <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <i data-lucide="check" class="w-3 h-3"></i> Pronta
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                <i data-lucide="clock" class="w-3 h-3"></i> Planejando
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium text-slate-800">{{ aula.data.strftime('%d/%m/%Y') }}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">{{ aula.turno }}</div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-slate-700 font-medium">
+                            {{ aula.unidade_predio or '-' }}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 max-w-md">
+                        <div class="font-medium text-slate-700 truncate" title="{{ aula.titulo }}">{{ aula.titulo }}</div>
+                        {% if aula.sala %}
+                        <div class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                            <i data-lucide="map-pin" class="w-3 h-3"></i> {{ aula.sala }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 text-right no-print">
+                        <button onclick="abrirModalAula({{ aula.id }})" class="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all btn-acao" title="Editar Detalhes">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </button>
+                        
+                        <a href="{{ url_for('excluir_aula', id=aula.id) }}" onclick="return confirm('Tem certeza que deseja excluir esta aula?')" class="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all btn-acao ml-1" title="Excluir">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                        <div class="flex flex-col items-center justify-center gap-2">
+                            <i data-lucide="inbox" class="w-10 h-10 opacity-30"></i>
+                            <p>Nenhuma aula encontrada com os filtros atuais.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if total_pages > 1 %}
+    <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50 no-print">
+        <span class="text-sm text-slate-500">
+            Página <strong>{{ page }}</strong> de <strong>{{ total_pages }}</strong>
+        </span>
+        <div class="flex gap-2">
+            {% if page > 1 %}
+            <a href="{{ url_for('gerenciar_aulas', page=page-1, search=search_query, turma_id=turma_selecionada, status=status_selecionados) }}" class="px-3 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50 text-slate-600 shadow-sm">Anterior</a>
+            {% endif %}
+            
+            {% if page < total_pages %}
+            <a href="{{ url_for('gerenciar_aulas', page=page+1, search=search_query, turma_id=turma_selecionada, status=status_selecionados) }}" class="px-3 py-1 bg-white border border-slate-200 rounded text-sm hover:bg-slate-50 text-slate-600 shadow-sm">Próxima</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% include 'components/modal_form_aula.html' %}
+
+<!-- Modal Importar Aulas (CSV) -->
+<div id="modalImportar" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 opacity-0 transition-opacity duration-300" onclick="if(event.target===this){this.classList.add('hidden','opacity-0');this.classList.remove('flex');}">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 relative" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="upload" class="w-5 h-5 text-violet-600"></i>
+                Importar Aulas
+            </h3>
+            <button type="button" onclick="var m=document.getElementById('modalImportar'); m.classList.add('hidden','opacity-0'); m.classList.remove('flex');" class="text-slate-400 hover:text-slate-600 p-1 rounded">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <p class="text-sm text-slate-500 mb-4">Envie um arquivo CSV com as colunas: <strong>turma</strong>, <strong>data</strong>, <strong>titulo</strong>. A coluna <em>turma</em> deve conter o nome exato de uma turma cadastrada.</p>
+        <a href="{{ url_for('download_modelo_importacao') }}" class="inline-flex items-center gap-2 text-sm text-violet-600 hover:text-violet-700 font-medium mb-4">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Baixar modelo CSV
+        </a>
+        <form action="{{ url_for('importar_aulas') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Arquivo CSV</label>
+                <input type="file" name="arquivo" accept=".csv" required class="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 file:font-medium border border-slate-200 rounded-lg">
+            </div>
+            <div class="flex gap-2 justify-end pt-2">
+                <button type="button" onclick="var m=document.getElementById('modalImportar'); m.classList.add('hidden','opacity-0'); m.classList.remove('flex');" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium text-sm">Cancelar</button>
+                <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium text-sm flex items-center gap-2">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    Importar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function imprimirInteligente() {
+        const select = document.getElementById('filtro_turma_id'); 
+        const turmaId = select ? select.value : 'Todas';
+
+        if (turmaId && turmaId !== 'Todas') {
+            window.open(`/turmas/imprimir/${turmaId}`, '_blank');
+        } else {
+            window.print();
+        }
+    }
+
+    // --- BOTÃO LINK SEMPRE VISÍVEL; CLICÁVEL QUANDO HOUVER URL ---
+    function verificarLink() {
+        const input = document.getElementById('input_link');
+        const btn = document.getElementById('btn_abrir_link');
+        if (!input || !btn) return;
+
+        const url = input.value.trim();
+        if (url.length > 0) {
+            btn.href = url.startsWith('http') ? url : 'https://' + url;
+            btn.classList.remove('opacity-50', 'pointer-events-none');
+            btn.title = 'Abrir link em nova guia';
+        } else {
+            btn.href = '#';
+            btn.classList.add('opacity-50', 'pointer-events-none');
+            btn.title = 'Informe um link no campo ao lado';
+        }
+    }
+
+    // Monitora a digitação
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputLink = document.getElementById('input_link');
+        if(inputLink) {
+            inputLink.addEventListener('input', verificarLink);
+        }
+    });
+
+    // --- FUNÇÃO DE ABRIR MODAL ---
+    async function abrirModalAula(aulaId = null, dataPreDefinida = null) {
+        const modal = document.getElementById('modalAulaUniversal');
+        const form = document.getElementById('formAula');
+        const title = document.getElementById('modalAulaTitle');
+        const subtitle = document.getElementById('modalAulaSubtitle');
+        const btnText = document.getElementById('txt_btn_submit');
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalAulaContent').classList.remove('scale-95');
+            document.getElementById('modalAulaContent').classList.add('scale-100');
+        }, 10);
+
+        // Helper seguro
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if(el) el.value = val;
+        };
+
+        if (aulaId) {
+            // EDIÇÃO
+            title.innerText = 'Editar Planejamento';
+            subtitle.innerText = 'Atualize as informações.';
+            btnText.innerText = 'Salvar Alterações';
+            form.action = "{{ url_for('editar_aula') }}";
+            
+            try {
+                const tituloInput = document.getElementById('input_titulo');
+                if(tituloInput) tituloInput.placeholder = "Carregando dados...";
+                
+                const response = await fetch(`/get_aula/${aulaId}`);
+                if (!response.ok) throw new Error('Falha ao buscar dados');
+                const data = await response.json();
+                
+                setVal('input_aula_id', data.id);
+                setVal('input_titulo', data.titulo);
+                setVal('input_data', data.data);
+                setVal('input_numero_aula', data.numero_aula || '');
+                setVal('select_turma', data.turma_id);
+                setVal('select_turno', data.turno);
+                setVal('select_status', data.status);
+                setVal('select_ministrante', data.ministrante_id);
+                setVal('input_sala', data.sala || '');
+                setVal('input_unidade', data.unidade_predio || '');
+                setVal('input_bloco', data.bloco_estudo || '');
+                setVal('input_descricao', data.descricao || '');
+                setVal('input_obs', data.observacoes || '');
+                
+                // LINK
+                setVal('input_link', data.link_arquivos || '');
+                
+                // *** CHAMA A VERIFICAÇÃO EXPLICITAMENTE AGORA ***
+                verificarLink();
+
+                if(typeof atualizarCorModal === 'function') atualizarCorModal();
+
+            } catch (error) {
+                console.error("Erro no modal:", error);
+                alert("Erro ao carregar dados.");
+            }
+        } else {
+            // CRIAÇÃO
+            title.innerText = 'Nova Aula';
+            subtitle.innerText = 'Preencha os detalhes.';
+            btnText.innerText = 'Criar Planejamento';
+            form.action = "{{ url_for('criar_aula') }}";
+            form.reset();
+            setVal('input_aula_id', '');
+            
+            if (dataPreDefinida) {
+                setVal('input_data', dataPreDefinida);
+            } else {
+                const hoje = new Date().toISOString().split('T')[0];
+                setVal('input_data', hoje);
+            }
+            
+            // Reseta botão
+            verificarLink();
+            
+            if(typeof atualizarCorModal === 'function') atualizarCorModal();
+        }
+    }
+
+    function fecharModalAula() {
+        const modal = document.getElementById('modalAulaUniversal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+    
+    function atualizarCorModal() {
+        const sel = document.getElementById('select_status');
+        if(!sel) return;
+        
+        const status = sel.value;
+        sel.classList.remove('text-blue-600', 'text-red-600', 'text-amber-600', 'text-green-600');
+        if (status === 'Planejando') sel.classList.add('text-blue-600');
+        if (status === 'Preparar') sel.classList.add('text-red-600');
+        if (status === 'Pronta') sel.classList.add('text-amber-600');
+        if (status === 'Entregue') sel.classList.add('text-green-600');
+    }
+
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('modalAulaUniversal')) {
+            fecharModalAula();
+        }
+    }
+</script>
+
+{% endblock %}

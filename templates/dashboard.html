@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% macro render_aula_card(aula) %}
+<button onclick="abrirModalAula({{ aula.id }})" 
+        class="text-left w-full p-1.5 mb-1.5 rounded-md border text-[10px] shadow-sm hover:shadow-md transition-all group flex flex-col gap-1 bg-white relative overflow-hidden
+        {% if aula.status == 'Entregue' %} 
+            border-green-300 bg-green-50/50 text-green-900
+        {% elif aula.status == 'Preparar' %} 
+            border-red-300 bg-red-50/50 text-red-900
+        {% elif aula.status == 'Pronta' %} 
+            border-amber-300 bg-amber-50/50 text-amber-900
+        {% elif aula.status == 'Planejando' %} 
+            border-blue-300 bg-blue-50/50 text-blue-900
+        {% else %} 
+            border-slate-300 bg-white text-slate-700
+        {% endif %}">
+    
+    <div class="absolute left-0 top-0 bottom-0 w-1 
+        {% if aula.status == 'Entregue' %}bg-green-500
+        {% elif aula.status == 'Preparar' %}bg-red-500
+        {% elif aula.status == 'Pronta' %}bg-amber-500
+        {% elif aula.status == 'Planejando' %}bg-blue-500
+        {% else %}bg-slate-300{% endif %}">
+    </div>
+
+    <div class="pl-2 flex flex-col w-full">
+        <div class="font-bold leading-tight flex justify-between items-start">
+            <span class="truncate pr-1">{{ aula.turma.nome }}</span>
+            {% if aula.status == 'Entregue' %}
+                <i data-lucide="check-circle-2" class="w-3 h-3 text-green-600 shrink-0"></i>
+            {% endif %}
+        </div>
+        <div class="truncate opacity-80 font-medium mt-0.5">{{ aula.titulo }}</div>
+        
+        {% if aula.sala %}
+        <div class="flex items-center gap-1 mt-1 text-[9px] opacity-60 font-semibold uppercase">
+            <i data-lucide="map-pin" class="w-2.5 h-2.5"></i> {{ aula.sala }}
+        </div>
+        {% endif %}
+    </div>
+</button>
+{% endmacro %}
+
+<div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+    
+    <div class="flex items-center bg-white rounded-lg p-1 shadow-sm border border-slate-200">
+        <a href="{{ url_for('dashboard', view='semanal', offset=offset) }}" 
+           class="px-4 py-2 text-sm rounded-md transition-all flex items-center gap-2 {% if view_mode == 'semanal' %}bg-blue-50 text-blue-700 font-bold{% else %}text-slate-500 hover:bg-slate-50{% endif %}">
+            <i data-lucide="calendar-days" class="w-4 h-4"></i> Semanal
+        </a>
+        <a href="{{ url_for('dashboard', view='mensal', offset=offset) }}" 
+           class="px-4 py-2 text-sm rounded-md transition-all flex items-center gap-2 {% if view_mode == 'mensal' %}bg-blue-50 text-blue-700 font-bold{% else %}text-slate-500 hover:bg-slate-50{% endif %}">
+           <i data-lucide="calendar" class="w-4 h-4"></i> Mensal
+        </a>
+    </div>
+
+    <div class="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg shadow-sm border border-slate-200">
+        <a href="{{ url_for('dashboard', view=view_mode, offset=offset-1) }}" class="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Anterior">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+        </a>
+        
+        <a href="{{ url_for('dashboard', view=view_mode, offset=0) }}" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold uppercase rounded border border-slate-300 transition-colors">
+            Hoje
+        </a>
+
+        <h2 class="text-sm md:text-base font-bold text-slate-800 min-w-[140px] md:min-w-[180px] text-center capitalize px-2 select-none">
+            {{ current_date_display }}
+        </h2>
+
+        <a href="{{ url_for('dashboard', view=view_mode, offset=offset+1) }}" class="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors" title="Próximo">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+        </a>
+    </div>
+
+    <button onclick="abrirModalAula()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all flex items-center gap-2 text-sm">
+        <i data-lucide="plus" class="w-4 h-4"></i> <span class="hidden md:inline">Nova Aula</span>
+    </button>
+</div>
+
+{% if view_mode == 'mensal' %}
+    <div class="grid grid-cols-7 gap-px bg-slate-300 border border-slate-300 rounded-xl overflow-hidden shadow-sm">
+        {% for dia_semana in dias_semana %}
+        <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">
+            {{ dia_semana }}
+        </div>
+        {% endfor %}
+
+        {% for dia in dias_calendario %}
+        <div class="min-h-[120px] bg-white p-2 flex flex-col gap-1 relative group transition-colors hover:bg-slate-50
+                    {% if not dia.in_month %}bg-slate-50/50 text-slate-400{% endif %}">
+            
+            <div class="flex justify-between items-start">
+                <span class="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full 
+                            {% if dia.full_date == hoje.strftime('%Y-%m-%d') %}bg-blue-600 text-white shadow-md{% else %}text-slate-500{% endif %}">
+                    {{ dia.day }}
+                </span>
+                <button onclick="abrirModalAula(null, '{{ dia.full_date }}')" class="opacity-0 group-hover:opacity-100 p-1 hover:bg-blue-50 text-blue-600 rounded transition-all">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-1 mt-1 overflow-y-auto max-h-[100px] custom-scrollbar">
+                {% if layout_data[dia.full_date] %}
+                    {% for turno, aulas_list in layout_data[dia.full_date].items() %}
+                        {% for aula in aulas_list %}
+                            <button onclick="abrirModalAula({{ aula.id }})" 
+                                    class="text-left text-[10px] px-1.5 py-1 rounded border truncate transition-all hover:brightness-95 w-full
+                                    {% if aula.status == 'Entregue' %} bg-green-50 border-green-200 text-green-800
+                                    {% elif aula.status == 'Preparar' %} bg-red-50 border-red-200 text-red-800
+                                    {% elif aula.status == 'Pronta' %} bg-amber-50 border-amber-200 text-amber-800
+                                    {% else %} bg-blue-50 border-blue-200 text-blue-800 {% endif %}">
+                                {{ aula.turma.nome }}
+                            </button>
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+{% else %}
+<div class="grid grid-cols-7 gap-px bg-slate-300 border border-slate-300 rounded-t-xl overflow-hidden shadow-sm">
+        {% for dia in dias_calendario %}
+        <div class="bg-slate-50 p-2 text-center border-b-4 
+                    {% if dia.full_date == hoje.strftime('%Y-%m-%d') %}border-blue-500 bg-blue-50/50{% else %}border-transparent{% endif %}">
+            <span class="block text-[10px] uppercase font-bold text-slate-500 mb-0.5">{{ dias_semana[loop.index0] }}</span>
+            <span class="text-xl font-bold leading-none {% if dia.full_date == hoje.strftime('%Y-%m-%d') %}text-blue-600{% else %}text-slate-800{% endif %}">
+                {{ dia.day }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="grid grid-cols-7 gap-px bg-slate-300 border-x border-b border-slate-300 rounded-b-xl overflow-hidden shadow-sm">
+        
+        {% for dia in dias_calendario %}
+        <div class="bg-white flex flex-col divide-y divide-slate-100">
+            
+            {% for turno in ['Manhã', 'Tarde', 'Noite'] %}
+            <div class="flex flex-col p-2 min-h-[140px] relative group hover:bg-slate-50/80 transition-colors
+                        {% if dia.full_date == hoje.strftime('%Y-%m-%d') %}bg-blue-50/10{% endif %}">
+                
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-300 flex items-center gap-1 group-hover:text-slate-400 transition-colors">
+                        {% if turno == 'Manhã' %}<i data-lucide="sun" class="w-3 h-3"></i>
+                        {% elif turno == 'Tarde' %}<i data-lucide="sunset" class="w-3 h-3"></i>
+                        {% else %}<i data-lucide="moon" class="w-3 h-3"></i>{% endif %}
+                        {{ turno }}
+                    </span>
+                    
+                    <button onclick="abrirModalAula(null, '{{ dia.full_date }}')" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-600 transition-all">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="flex flex-col gap-1 w-full flex-1">
+                    {% if layout_data[dia.full_date] and layout_data[dia.full_date][turno] %}
+                        {% for aula in layout_data[dia.full_date][turno] %}
+                            {{ render_aula_card(aula) }}
+                        {% endfor %}
+                    {% else %}
+                        <div onclick="abrirModalAula(null, '{{ dia.full_date }}')" 
+                             class="flex-1 rounded border border-dashed border-transparent hover:border-slate-200 cursor-pointer flex items-center justify-center group/ghost transition-all w-full min-h-[40px]">
+                            <i data-lucide="plus" class="w-4 h-4 text-slate-200 opacity-0 group-hover/ghost:opacity-100"></i>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+        {% endfor %}
+
+    </div>
+{% endif %}
+
+{% include 'components/modal_form_aula.html' %}
+
+<script>
+    // --- FUNÇÃO AUXILIAR PARA O LINK ---
+    function verificarLink() {
+        const input = document.getElementById('input_link');
+        // Tenta encontrar o botão com os dois IDs possíveis para garantir
+        const btn = document.getElementById('btn_testar_link') || document.getElementById('btn_abrir_link');
+        
+        if (!input || !btn) return;
+
+        const url = input.value.trim();
+        
+        if (url.length > 3) {
+            // TEM LINK: Mostra o botão e ativa a cor azul
+            btn.href = url.startsWith('http') ? url : 'https://' + url;
+            
+            // Remove classes que escondem ou desativam
+            btn.classList.remove('hidden', 'opacity-50', 'pointer-events-none', 'bg-slate-100', 'text-slate-500');
+            
+            // Adiciona classes de visibilidade e cor
+            btn.classList.add('flex', 'bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+        } else {
+            // SEM LINK: Esconde ou desativa visualmente
+            btn.href = '#';
+            
+            // Remove cores ativas
+            btn.classList.remove('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+            
+            // Adiciona aparência desativada (pode usar 'hidden' se quiser sumir com ele)
+            btn.classList.add('bg-slate-100', 'text-slate-500', 'opacity-50', 'pointer-events-none');
+        }
+    }
+
+    // Monitora a digitação em tempo real
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputLink = document.getElementById('input_link');
+        if(inputLink) {
+            inputLink.addEventListener('input', verificarLink);
+        }
+    });
+
+    // --- FUNÇÃO PRINCIPAL DO MODAL ---
+    async function abrirModalAula(aulaId = null, dataPreDefinida = null) {
+        const modal = document.getElementById('modalAulaUniversal');
+        const form = document.getElementById('formAula');
+        const title = document.getElementById('modalAulaTitle');
+        const subtitle = document.getElementById('modalAulaSubtitle');
+        const btnText = document.getElementById('txt_btn_submit');
+        
+        // Exibe o modal
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            document.getElementById('modalAulaContent').classList.remove('scale-95');
+            document.getElementById('modalAulaContent').classList.add('scale-100');
+        }, 10);
+
+        if (aulaId) {
+            // === MODO EDIÇÃO ===
+            title.innerText = 'Editar Planejamento';
+            subtitle.innerText = 'Atualize as informações da aula.';
+            btnText.innerText = 'Salvar Alterações';
+            form.action = "{{ url_for('editar_aula') }}";
+            
+            try {
+                // Feedback visual enquanto carrega
+                document.getElementById('input_titulo').placeholder = "Carregando dados...";
+                
+                const response = await fetch(`/get_aula/${aulaId}`);
+                if (!response.ok) throw new Error('Falha ao buscar dados');
+                const data = await response.json();
+                
+                // Preenche os campos
+                document.getElementById('input_aula_id').value = data.id;
+                document.getElementById('input_titulo').value = data.titulo;
+                document.getElementById('input_data').value = data.data;
+                document.getElementById('input_numero_aula').value = data.numero_aula || '';
+                
+                // Selects
+                document.getElementById('select_turma').value = data.turma_id;
+                document.getElementById('select_turno').value = data.turno;
+                document.getElementById('select_status').value = data.status;
+                document.getElementById('select_ministrante').value = data.ministrante_id;
+                
+                // Campos de Texto
+                document.getElementById('input_sala').value = data.sala || '';
+                document.getElementById('input_unidade').value = data.unidade_predio || '';
+                document.getElementById('input_bloco').value = data.bloco_estudo || '';
+                document.getElementById('input_descricao').value = data.descricao || '';
+                document.getElementById('input_obs').value = data.observacoes || '';
+                
+                // === CORREÇÃO DO LINK AQUI ===
+                const linkField = document.getElementById('input_link');
+                linkField.value = data.link_arquivos || '';
+                
+                // Chama a verificação MANUALMENTE agora que o valor foi definido
+                verificarLink(); 
+
+                if(typeof atualizarCorModal === 'function') atualizarCorModal();
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao carregar dados da aula.");
+                fecharModalAula();
+            }
+        } else {
+            // === MODO CRIAÇÃO ===
+            title.innerText = 'Nova Aula';
+            subtitle.innerText = 'Preencha os detalhes para agendar.';
+            btnText.innerText = 'Criar Planejamento';
+            form.action = "{{ url_for('criar_aula') }}";
+            
+            form.reset();
+            document.getElementById('input_aula_id').value = '';
+            
+            if (dataPreDefinida) {
+                document.getElementById('input_data').value = dataPreDefinida;
+            } else {
+                const hoje = new Date().toISOString().split('T')[0];
+                document.getElementById('input_data').value = hoje;
+            }
+            
+            // Reseta o estado do botão de link para oculto/inativo
+            verificarLink(); 
+            
+            if(typeof atualizarCorModal === 'function') atualizarCorModal();
+        }
+    }
+
+    function fecharModalAula() {
+        const modal = document.getElementById('modalAulaUniversal');
+        modal.classList.add('opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    }
+    
+    function atualizarCorModal() {
+        const sel = document.getElementById('select_status');
+        const status = sel.value;
+        sel.classList.remove('text-blue-600', 'text-red-600', 'text-amber-600', 'text-green-600');
+        if (status === 'Planejando') sel.classList.add('text-blue-600');
+        if (status === 'Preparar') sel.classList.add('text-red-600');
+        if (status === 'Pronta') sel.classList.add('text-amber-600');
+        if (status === 'Entregue') sel.classList.add('text-green-600');
+    }
+
+    // Fecha ao clicar fora
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('modalAulaUniversal')) {
+            fecharModalAula();
+        }
+    }
+</script>
+
+{% endblock %}

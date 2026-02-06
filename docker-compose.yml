@@ -1,0 +1,15 @@
+services:
+  planner-app:
+    build: .
+    container_name: planner_container
+    restart: always
+    ports:
+      - "80:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./instance:/app/instance
+      - ./token.json:/app/token.json
+      - ./credentials.json:/app/credentials.json
+    environment:
+      - TZ=America/Sao_Paulo
